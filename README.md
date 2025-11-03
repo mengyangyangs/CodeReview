@@ -32,6 +32,7 @@ export GENAI_API_KEY="YOUR_GEMINI_API_KEY"
 ### 3.创建虚拟环境并激活
 建议使用Conda来构建环境
 `conda create -n your_project_name python=3.10`，建议选择Python3.10版本
+
 激活环境
 `conda activate your_project_name`
 
