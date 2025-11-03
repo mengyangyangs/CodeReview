@@ -29,8 +29,11 @@ cd CodeReviewAgent
 将你的 API Key 设置为系统环境变量：
 export GENAI_API_KEY="YOUR_GEMINI_API_KEY"
 
-### 3.创建虚拟环境
-建议使用Conda来构建环境，conda create -n your_project_name python=3.10，建议选择Python3.10版本
+### 3.创建虚拟环境并激活
+建议使用Conda来构建环境
+`conda create -n your_project_name python=3.10`，建议选择Python3.10版本
+激活环境
+`conda activate your_project_name`
 
 ### 4.安装各种依赖
 pip install -r requestments.txt
