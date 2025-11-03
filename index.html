@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Review Agent</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* (CSS 样式与你之前提供的基本一致，此处省略以保持简洁) */
+        /* ... (省略所有 CSS 样式) ... */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f7f7f7;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .header {
+            padding: 20px 30px;
+            border-bottom: 2px solid #eee;
+        }
+        .header h1 {
+            margin: 0;
+            color: #1a1a1a;
+        }
+        #upload-section {
+            padding: 30px;
+            border-bottom: 2px solid #eee;
+        }
+        #upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        #file-input {
+            font-size: 1em;
+            padding: 10px;
+            border: 2px dashed #007aff;
+            border-radius: 6px;
+            background-color: #f9f9f9;
+            cursor: pointer;
+        }
+        #upload-button {
+            font-size: 1.1em;
+            padding: 12px 20px;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #upload-button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        #upload-button:disabled {
+            background-color: #c0c0c0;
+            cursor: not-allowed;
+        }
+        #loading {
+            display: none;
+            padding: 30px;
+            text-align: center;
+            font-size: 1.2em;
+            color: #555;
+        }
+        #error {
+            display: none;
+            padding: 20px 30px;
+            background-color: #ffebeB;
+            color: #c00;
+            border-bottom: 2px solid #eee;
+        }
+        #results-container {
+            display: none;
+            padding: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            font-size: 1.5em;
+            color: #007aff;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 5px;
+        }
+        .file-review {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #fafafa;
+        }
+        .file-review h3 {
+            color: #007aff;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .gemini-review h3 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 4px;
+            margin-top: 25px;
+        }
+        .gemini-review code:not(pre > code) {
+            background-color: #f0f0f0;
+            color: #c7254e;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Code Review Agent</h1>
+            <p>支持单个文件或 **.zip 压缩包**上传进行批量审查。</p>
+        </div>
+
+        <div id="error"></div>
+
+        <div id="upload-section">
+            <form id="upload-form">
+                <label for="file-input">选择一个代码文件或 .zip 压缩包：</label>
+                <input type="file" id="file-input" name="file" accept=".py, .js, .swift, .c, .cpp, .java, .zip" required>
+                <button type="submit" id="upload-button">开始审查</button>
+            </form>
+        </div>
+
+        <div id="loading">
+            <p>正在分析中，请稍候... (AI 审查可能需要一段时间)</p>
+        </div>
+
+        <div id="results-container">
+            </div>
+    </div>
+
+    <script>
+        const uploadForm = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file-input');
+        const uploadButton = document.getElementById('upload-button');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error');
+        const resultsContainer = document.getElementById('results-container');
+        
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const file = fileInput.files[0];
+            if (!file) {
+                showError("请先选择一个文件。");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // ⭐️ 核心逻辑：根据文件扩展名选择 API 接口
+            const isZip = file.name.toLowerCase().endsWith('.zip');
+            const endpoint = isZip ? '/review/zip' : '/review';
+
+            // UI 状态更新
+            uploadButton.disabled = true;
+            uploadButton.textContent = "审查中...";
+            loadingDiv.style.display = 'block';
+            resultsContainer.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (isZip) {
+                        displayZipResults(data.results);
+                    } else {
+                        displaySingleFileResults(data);
+                    }
+                } else {
+                    const errorData = await response.json();
+                    showError(errorData.detail || `HTTP 错误 ${response.status}: 发生未知错误。`);
+                }
+
+            } catch (err) {
+                console.error('Fetch Error:', err);
+                showError("连接服务器失败。请检查后端服务是否已启动。");
+            } finally {
+                uploadButton.disabled = false;
+                uploadButton.textContent = "开始审查";
+                loadingDiv.style.display = 'none';
+            }
+        });
+
+        // 辅助函数：显示单个文件结果
+        function displaySingleFileResults(data) {
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = `
+                <div class="section">
+                    <h2>📊 审查概览</h2>
+                    <p><strong>文件:</strong> <span>${data.filename}</span></p>
+                    <p><strong>语言:</strong> <span>${data.language}</span></p>
+                </div>
+                
+                <div class="section">
+                    <h2>🤖 Gemini 智能审查</h2>
+                    <div class="gemini-review" id="single-gemini-review"></div>
+                </div>
+                
+                <div class="section">
+                    <h2>🔬 静态分析 (Linter)</h2>
+                    <pre><code id="single-static-check">${data.static_check}</code></pre>
+                </div>
+            `;
+            // 使用 marked.js 渲染 Markdown
+            document.getElementById('single-gemini-review').innerHTML = marked.parse(data.gemini_review);
+        }
+
+        // ⭐️ 新增：显示 ZIP 压缩包的批量结果
+        function displayZipResults(results) {
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = `<h2 class="section">📂 压缩包审查报告 (共 ${results.length} 个文件)</h2>`;
+
+            results.forEach((data, index) => {
+                const reviewDiv = document.createElement('div');
+                reviewDiv.className = 'file-review';
+                
+                const geminiId = `gemini-review-${index}`;
+                
+                reviewDiv.innerHTML = `
+                    <h3>文件 ${index + 1}: ${data.filename} (${data.language})</h3>
+                    <div class="section">
+                        <h4>🤖 智能审查</h4>
+                        <div class="gemini-review" id="${geminiId}"></div>
+                    </div>
+                    <div class="section">
+                        <h4>🔬 静态分析</h4>
+                        <pre><code>${data.static_check}</code></pre>
+                    </div>
+                `;
+                resultsContainer.appendChild(reviewDiv);
+
+                // 渲染 Markdown
+                document.getElementById(geminiId).innerHTML = marked.parse(data.gemini_review);
+            });
+        }
+
+        function showError(message) {
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = `<strong>错误:</strong> ${message}`;
+        }
+    </script>
+</body>
+</html>
