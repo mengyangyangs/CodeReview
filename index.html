@@ -6,8 +6,6 @@
     <title>Code Review Agent</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        /* (CSS 样式与你之前提供的基本一致，此处省略以保持简洁) */
-        /* ... (省略所有 CSS 样式) ... */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             line-height: 1.6;
@@ -135,15 +133,16 @@
     <div class="container">
         <div class="header">
             <h1>🤖 Code Review Agent</h1>
-            <p>支持单个文件或 **.zip 压缩包**上传进行批量审查。</p>
+            <p>支持选择 **多个文件** 或上传 **.zip 压缩包**进行批量审查。</p>
         </div>
 
         <div id="error"></div>
 
         <div id="upload-section">
             <form id="upload-form">
-                <label for="file-input">选择一个代码文件或 .zip 压缩包：</label>
-                <input type="file" id="file-input" name="file" accept=".py, .js, .swift, .c, .cpp, .java, .zip" required>
+                <label for="file-input">选择一个或多个代码文件（可多选）或一个 .zip 压缩包：</label>
+                <!-- ⭐️ 修改：添加 multiple 属性允许选择多个文件 -->
+                <input type="file" id="file-input" name="files" accept=".py, .js, .swift, .c, .cpp, .java, .zip" multiple required>
                 <button type="submit" id="upload-button">开始审查</button>
             </form>
         </div>
@@ -153,7 +152,7 @@
         </div>
 
         <div id="results-container">
-            </div>
+        </div>
     </div>
 
     <script>
@@ -167,18 +166,32 @@
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const file = fileInput.files[0];
-            if (!file) {
-                showError("请先选择一个文件。");
+            const files = fileInput.files;
+            if (files.length === 0) {
+                showError("请先选择文件或压缩包。");
                 return;
             }
 
             const formData = new FormData();
-            formData.append('file', file);
-            
-            // ⭐️ 核心逻辑：根据文件扩展名选择 API 接口
-            const isZip = file.name.toLowerCase().endsWith('.zip');
-            const endpoint = isZip ? '/review/zip' : '/review';
+            let endpoint = '';
+
+            // ⭐️ 核心逻辑修改：根据选择的文件数量和类型选择 API 接口
+            if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+                // 单个 ZIP 文件
+                formData.append('file', files[0]);
+                endpoint = '/review/zip';
+                // 如果想使用 HTML 报告，可以改为 '/review/zip/pretty'
+            } else if (files.length > 1) {
+                // 多个文件
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]); // 后端接口接收 List[UploadFile]，字段名为 'files'
+                }
+                endpoint = '/review/multiple'; // 新增的后端接口
+            } else {
+                // 单个非 ZIP 文件
+                formData.append('file', files[0]);
+                endpoint = '/review';
+            }
 
             // UI 状态更新
             uploadButton.disabled = true;
@@ -196,9 +209,14 @@
                 if (response.ok) {
                     const data = await response.json();
                     
-                    if (isZip) {
+                    if (endpoint === '/review/zip') {
+                        // ZIP 文件的 JSON 结果
                         displayZipResults(data.results);
+                    } else if (endpoint === '/review/multiple') {
+                        // 多个文件的 JSON 结果
+                        displayMultipleFileResults(data.results);
                     } else {
+                        // 单个非 ZIP 文件的 JSON 结果
                         displaySingleFileResults(data);
                     }
                 } else {
@@ -220,27 +238,53 @@
         function displaySingleFileResults(data) {
             resultsContainer.style.display = 'block';
             resultsContainer.innerHTML = `
-                <div class="section">
-                    <h2>📊 审查概览</h2>
-                    <p><strong>文件:</strong> <span>${data.filename}</span></p>
-                    <p><strong>语言:</strong> <span>${data.language}</span></p>
-                </div>
-                
-                <div class="section">
-                    <h2>🤖 Gemini 智能审查</h2>
-                    <div class="gemini-review" id="single-gemini-review"></div>
-                </div>
-                
-                <div class="section">
-                    <h2>🔬 静态分析 (Linter)</h2>
-                    <pre><code id="single-static-check">${data.static_check}</code></pre>
+                <h2 class="section">📋 单文件审查报告</h2>
+                <div class="file-review">
+                    <h3>文件: ${data.filename} (${data.language})</h3>
+                    <div class="section">
+                        <h4>🤖 Gemini 智能审查</h4>
+                        <div class="gemini-review" id="single-gemini-review"></div>
+                    </div>
+                    <div class="section">
+                        <h4>🔬 静态分析</h4>
+                        <pre><code id="single-static-check">${data.static_check}</code></pre>
+                    </div>
                 </div>
             `;
             // 使用 marked.js 渲染 Markdown
             document.getElementById('single-gemini-review').innerHTML = marked.parse(data.gemini_review);
         }
 
-        // ⭐️ 新增：显示 ZIP 压缩包的批量结果
+        // ⭐️ 新增：显示多个文件结果
+        function displayMultipleFileResults(results) {
+            resultsContainer.style.display = 'block';
+            resultsContainer.innerHTML = `<h2 class="section">📝 多文件审查报告 (共 ${results.length} 个文件)</h2>`;
+
+            results.forEach((data, index) => {
+                const reviewDiv = document.createElement('div');
+                reviewDiv.className = 'file-review';
+                
+                const geminiId = `gemini-review-${index}`;
+                
+                reviewDiv.innerHTML = `
+                    <h3>文件 ${index + 1}: ${data.filename} (${data.language})</h3>
+                    <div class="section">
+                        <h4>🤖 智能审查</h4>
+                        <div class="gemini-review" id="${geminiId}"></div>
+                    </div>
+                    <div class="section">
+                        <h4>🔬 静态分析</h4>
+                        <pre><code>${data.static_check}</code></pre>
+                    </div>
+                `;
+                resultsContainer.appendChild(reviewDiv);
+
+                // 渲染 Markdown
+                document.getElementById(geminiId).innerHTML = marked.parse(data.gemini_review);
+            });
+        }
+
+        // 辅助函数：显示 ZIP 压缩包的批量结果 (与之前基本相同，但统一了调用)
         function displayZipResults(results) {
             resultsContainer.style.display = 'block';
             resultsContainer.innerHTML = `<h2 class="section">📂 压缩包审查报告 (共 ${results.length} 个文件)</h2>`;
@@ -268,6 +312,7 @@
                 document.getElementById(geminiId).innerHTML = marked.parse(data.gemini_review);
             });
         }
+
 
         function showError(message) {
             errorDiv.style.display = 'block';
