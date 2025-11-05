@@ -3,3 +3,5 @@ uvicorn[standard]
 google-generativeai
 markdown2
 pylint
+python-multipart
+google-genai
