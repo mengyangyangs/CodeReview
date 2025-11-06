@@ -40,7 +40,7 @@ export GENAI_API_KEY="YOUR_GEMINI_API_KEY"
 pip install -r requestments.txt
 
 ### 5.在终端输入指令
-uvicorn main:app --host 0.0.0.0 --port 8080，然后打开本地浏览器，`http://127.0.0.1:8000`
+uvicorn main:app --host 0.0.0.0 --port 8080，然后打开本地浏览器，`http://127.0.0.1:8080`
 
 ### 接口概览
 
@@ -54,7 +54,7 @@ uvicorn main:app --host 0.0.0.0 --port 8080，然后打开本地浏览器，`htt
  
 ### 前端界面
 
-访问 `http://127.0.0.1:8000` 即可进入用户界面。
+访问 `http://127.0.0.1:8080` 即可进入用户界面。
 
 界面允许你：
 
