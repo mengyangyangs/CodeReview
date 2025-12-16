@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import zipfile
 import shutil
+import json
 from typing import List # ⭐️ 新增：导入 List
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
 from fastapi.responses import JSONResponse, HTMLResponse

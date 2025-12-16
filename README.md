@@ -1,65 +1,128 @@
-# Code Review Agent - 智能代码审查系统
+# 🤖 Code Review Agent
 
-## 项目简介
+**Code Review Agent** 是一个基于 **Gemini 2.5 Pro** 模型的智能代码审查系统。它结合了先进的 AI 大模型分析与传统的静态代码检查工具，为开发者提供全面、深入的代码质量反馈。
 
-Code Review Agent 是一个基于 FastAPI 框架和 Google Gemini 大语言模型构建的智能代码审查系统。它旨在帮助开发者快速、高效地发现代码中的潜在问题，如 Bug、安全漏洞、性能瓶颈以及提供优化建议。系统支持单个代码文件上传审查，更强大的是，它能够接收 .zip 压缩包，对其中的多个代码文件进行批量审查，并生成结构化的 JSON 报告或美观的 HTML 报告。前端界面简洁直观，用户体验友好。
+通过简洁的 Web 界面，您可以轻松上传单个代码文件、批量文件或整个 ZIP 项目包，系统将自动进行审查并生成详细的修复建议和优化报告。
 
-## 主要特性
+---
 
-*   智能代码审查: 利用 Google Gemini 2.5 Pro 大语言模型，提供深入、专业的代码审查意见、修改建议，甚至尝试直接给出修改后的代码。
-*   多语言支持: 通过文件扩展名自动识别 Python, Swift, C, C++, JavaScript, Java 等多种编程语言。
-*   静态代码分析集成: 针对不同语言（如 Python 的 Pylint, Swift 的 SwiftLint, C/C++ 的 Clang），集成主流静态分析工具，提供额外的代码质量报告。
-*   支持单文件审查: 用户可以直接上传单个代码文件获取即时审查结果。
-*   支持 ZIP 压缩包批量审查: 革命性地支持上传 .zip 压缩包，系统会自动解压并审查包内的所有代码文件，尤其适用于项目级别的代码审查。
-*   多种报告格式:
-    *   JSON 报告: 提供机器可读的结构化审查数据，便于集成到 CI/CD 流程或其他自动化工具中。
-    *   美观的 HTML 报告: 为批量审查结果生成一个排版优美、易于阅读的 HTML 页面，直观展示每个文件的审查详情。
-*   友好的前端界面: 简洁的 Web UI，方便用户上传文件、查看审查进度和结果。
-*   高效异步处理: 利用 FastAPI 的异步能力，确保在处理大文件或多个文件时系统的响应性和吞吐量。
+## ✨ 核心功能
 
-## 快速开始
+- **🤖 AI 智能审查**：利用 Google Gemini 2.5 Pro 模型，深入分析代码逻辑，发现潜在 Bug、安全漏洞及性能瓶颈，并提供重构后的代码示例。
+- **🔬 静态代码分析**：集成多种静态分析工具，提供语法和规范性检查：
+    - 🐍 **Python**: 使用 `pylint`
+    - 🍎 **Swift**: 使用 `swiftlint`
+    - 🇨 **C/C++**: 使用 `clang`
+- **📂 多格式支持**：
+    - 单个文件上传
+    - 批量多文件上传
+    - ZIP 压缩包上传（自动解压并递归审查）
+- **📊 可视化报告**：提供直观的 HTML 报告，支持 Markdown 渲染，代码高亮显示。
+- **🔌 RESTful API**：提供标准的 API 接口，方便集成到 CI/CD 流程或其他工具中。
 
-### 1. 克隆项目
-git clone <项目仓库地址> # 替换为你的项目仓库地址
-cd CodeReviewAgent
+---
 
-### 2. 设置 Gemini API Key
-在运行之前，你需要一个 Google Gemini API Key。请访问 Google AI Studio (https://ai.google.dev/) 获取。
+## 🛠️ 环境要求
 
-将你的 API Key 设置为系统环境变量：
-export GENAI_API_KEY="YOUR_GEMINI_API_KEY"
+在运行本项目之前，请确保您的环境满足以下要求：
 
-### 3.创建虚拟环境并激活
-建议使用Conda来构建环境
-`conda create -n your_project_name python=3.10`，建议选择Python3.10版本
+- **Python 3.10+**
+- **Google GenAI API Key**：需要申请 Gemini API Key。
 
-激活环境
-`conda activate your_project_name`
+### 可选依赖（用于静态分析）
+为了获得完整的静态检查功能，建议安装以下系统工具：
+- **Pylint**: `pip install pylint` (通常包含在 requirements.txt 中)
+- **SwiftLint**: (macOS) `brew install swiftlint`
+- **Clang**: (macOS/Linux) 通常系统自带或通过 `xcode-select --install` / `apt install clang` 安装
 
-### 4.安装各种依赖
-pip install -r requestments.txt
+---
 
-### 5.在终端输入指令
-uvicorn main:app --host 0.0.0.0 --port 8080，然后打开本地浏览器，`http://127.0.0.1:8080`
+## 🚀 快速开始
 
-### 接口概览
+### 1. 克隆仓库
 
-*   `GET /`: 访问前端用户界面。
-*   `POST /review`: 上传单个代码文件进行审查，返回 JSON 格式结果。
-    *   `file`: (File) 要审查的代码文件。
-*   `POST /review/zip`: 上传 .zip 压缩包进行批量审查，返回包含所有文件审查结果的 JSON 列表。
-    *   `file`: (File) 要审查的 .zip 文件。
-*   `POST /review/zip/pretty`: 上传 .zip 压缩包进行批量审查，返回美观的 HTML 报告页面。
-    *   `file`: (File) 要审查的 .zip 文件。
- 
-### 前端界面
+```bash
+git clone https://github.com/mengyangyangs/CodeReview.git
+cd CodeReview
+```
 
-访问 `http://127.0.0.1:8080` 即可进入用户界面。
+### 2. 安装依赖
 
-界面允许你：
+建议创建虚拟环境后安装依赖：
 
-1.  选择单个代码文件 (.py, .js, .swift, .c, .cpp, .java 等)。
-2.  选择 .zip 压缩包。
-3.  点击 "开始审查" 按钮。
-4.  等待审查完成，结果将直接展示在页面上，对于 ZIP 文件会有详细的每个文件的报告。
-PS:建议不要上传zip，因为会看到这个报错`调用 Gemini 模型时出错: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota... limit: 2... Please retry in 57.099437754s.'}`,说明你已达到当前配额限制（Quota Limit）。具体来说，你的免费配额（Free Tier）的限制是每分钟 2 个请求（limit: 2）。毕竟白嫖的，懂得都懂
+```bash
+python3 -m venv venv
+source venv/bin/activate  # macOS/Linux
+# venv\Scripts\activate   # Windows
+
+pip install -r requirements.txt
+```
+
+### 3. 配置 API Key
+
+您需要将 Gemini API Key 设置为环境变量 `GENAI_API_KEY`。
+
+**macOS/Linux:**
+```bash
+export GENAI_API_KEY="your_actual_api_key_here"
+```
+
+**Windows (PowerShell):**
+```powershell
+$env:GENAI_API_KEY="your_actual_api_key_here"
+```
+
+### 4. 启动服务
+
+使用 `uvicorn` 启动 FastAPI 服务：
+
+```bash
+uvicorn main:app --reload
+```
+
+服务启动后，终端将显示访问地址，通常为：`http://127.0.0.1:8000`
+
+---
+
+## 📖 使用指南
+
+### Web 界面
+
+1. 打开浏览器访问 `http://127.0.0.1:8000`。
+2. 点击 **"选择文件"** 按钮。
+    - 您可以选择一个或多个代码文件（`.py`, `.js`, `.java`, `.cpp` 等）。
+    - 也可以选择一个 `.zip` 压缩包（适合审查整个项目）。
+3. 点击 **"开始审查"**。
+4. 等待分析完成后，页面下方将展示每个文件的 AI 审查意见和静态检查结果。
+
+### API 接口
+
+您也可以通过 API 直接调用服务：
+
+- **POST `/review`**: 上传单个文件进行审查。
+- **POST `/review/multiple`**: 上传多个文件进行批量审查。
+- **POST `/review/zip`**: 上传 ZIP 包，返回 JSON 格式的批量报告。
+- **POST `/review/zip/pretty`**: 上传 ZIP 包，直接返回渲染好的 HTML 报告页面。
+
+---
+
+## 📂 项目结构
+
+```text
+CodeReviewAgent/
+├── main.py              # FastAPI 后端核心逻辑
+├── index.html           # 前端 UI 界面
+├── requirements.txt     # Python 依赖列表
+├── readme.md            # 项目说明文档
+└── ...
+```
+
+## ⚠️ 注意事项
+
+- 请确保您的 API Key 有足够的配额。
+- 上传 ZIP 文件时，系统会自动过滤 `.DS_Store`、`__pycache__` 等无关文件，并跳过超过 5MB 的大文件。
+- 静态分析依赖于宿主机的环境，如果未安装对应的 Linter 工具（如 swiftlint），静态检查部分将显示 "N/A"。
+
+---
+
+**Happy Coding! 🚀**
